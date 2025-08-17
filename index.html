@@ -245,7 +245,7 @@
                 </div>
             `;
             
-            createModal('', content, 'max-w-5xl'); // Increased width
+            createModal('', content);
 
             if (currentUser) {
                 document.getElementById('modal-save-btn')?.addEventListener('click', () => {
@@ -302,7 +302,7 @@
         logoutBtn.addEventListener('click', () => signOut(auth));
         
         // --- UPDATED: createModal function for better scrolling ---
-        function createModal(title, content, maxWidth = 'max-w-5xl') { // Increased width
+        function createModal(title, content, maxWidth = 'max-w-4xl') { // Changed default to 4xl
             modalContainer.innerHTML = `
                 <div id="modal-backdrop" class="fixed inset-0 z-50 modal-backdrop flex justify-center items-center p-4">
                     <div class="bg-white rounded-lg shadow-xl w-full ${maxWidth} flex flex-col" style="max-height: 90vh;">
