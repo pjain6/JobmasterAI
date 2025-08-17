@@ -241,11 +241,11 @@
                     <div id="cover-letter-generation-ui" class="hidden my-6 p-4 border rounded-lg bg-gray-50"></div>
 
                     <h3 class="text-xl font-semibold border-b pb-2 mt-8 mb-4">Job Description</h3>
-                    <p class="text-gray-700 leading-relaxed">${job.description}</p>
+                    <p class="text-gray-700 leading-relaxed whitespace-pre-wrap">${job.description}</p>
                 </div>
             `;
             
-            createModal('', content, 'max-w-4xl'); // Increased width
+            createModal('', content, 'max-w-4xl');
 
             if (currentUser) {
                 document.getElementById('modal-save-btn')?.addEventListener('click', () => {
@@ -304,9 +304,9 @@
         // --- UPDATED: createModal function for better scrolling ---
         function createModal(title, content, maxWidth = 'max-w-4xl') {
             modalContainer.innerHTML = `
-                <div id="modal-backdrop" class="fixed inset-0 z-50 modal-backdrop flex justify-center items-start p-4 sm:p-6 md:p-10">
-                    <div class="bg-white rounded-lg shadow-xl w-full ${maxWidth} relative flex flex-col max-h-[90vh]">
-                        <div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center flex-shrink-0">
+                <div id="modal-backdrop" class="fixed inset-0 z-50 modal-backdrop flex justify-center items-center p-4">
+                    <div class="bg-white rounded-lg shadow-xl w-full ${maxWidth} flex flex-col" style="max-height: 90vh;">
+                        <div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center flex-shrink-0 z-10">
                             <h2 class="text-2xl font-bold">${title}</h2>
                             <button id="close-modal-btn" class="text-2xl font-bold p-2 leading-none rounded-full hover:bg-gray-200">&times;</button>
                         </div>
@@ -315,7 +315,15 @@
                         </div>
                     </div>
                 </div>`;
-            document.getElementById('modal-backdrop').addEventListener('click', (e) => { if (e.target.id === 'modal-backdrop' || e.target.id === 'close-modal-btn') { modalContainer.innerHTML = ''; } });
+            document.getElementById('modal-backdrop').addEventListener('click', (e) => {
+                // Close only if clicking the backdrop itself, not the content inside
+                if (e.target.id === 'modal-backdrop') {
+                    modalContainer.innerHTML = '';
+                }
+            });
+            document.getElementById('close-modal-btn').addEventListener('click', () => {
+                modalContainer.innerHTML = '';
+            });
         }
         
         howToUseBtn.addEventListener('click', () => {
