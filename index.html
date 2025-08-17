@@ -302,10 +302,10 @@
         logoutBtn.addEventListener('click', () => signOut(auth));
         
         // --- UPDATED: createModal function for better scrolling ---
-        function createModal(title, content, maxWidth = 'max-w-4xl') { // Changed default to 4xl
+        function createModal(title, content, maxWidth = 'max-w-5xl') { // Increased width
             modalContainer.innerHTML = `
                 <div id="modal-backdrop" class="fixed inset-0 z-50 modal-backdrop flex justify-center items-center p-4">
-                    <div class="bg-white rounded-lg shadow-xl w-full ${maxWidth} flex flex-col" style="max-height: 90vh;">
+                    <div class="bg-white rounded-lg shadow-xl w-full ${maxWidth} flex flex-col" style="height: 90vh; max-height: 800px;">
                         <div class="p-4 border-b flex justify-between items-center flex-shrink-0 z-10">
                             <h2 class="text-2xl font-bold">${title}</h2>
                             <button id="close-modal-btn" class="text-2xl font-bold p-2 leading-none rounded-full hover:bg-gray-200">&times;</button>
