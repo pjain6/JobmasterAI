@@ -217,7 +217,7 @@
             return jobCard;
         }
 
-        // --- NEW: JOB DETAIL MODAL ---
+        // --- JOB DETAIL MODAL ---
         function showJobDetailModal(jobId) {
             const job = currentJobs.find(j => j.id === jobId);
             if (!job) return;
@@ -245,12 +245,11 @@
                 </div>
             `;
             
-            createModal('', content, 'max-w-3xl');
+            createModal('', content, 'max-w-4xl'); // Increased width
 
             if (currentUser) {
                 document.getElementById('modal-save-btn')?.addEventListener('click', () => {
                     toggleSaveJob(job.id, job);
-                    // Re-render modal to update save button text
                     showJobDetailModal(job.id);
                 });
                 document.getElementById('modal-cl-btn')?.addEventListener('click', () => {
@@ -259,7 +258,7 @@
             }
         }
         
-        // --- NEW: STREAMLINED COVER LETTER GENERATION ---
+        // --- STREAMLINED COVER LETTER GENERATION ---
         function generateCoverLetter(job) {
             const uiContainer = document.getElementById('cover-letter-generation-ui');
             uiContainer.classList.remove('hidden');
@@ -302,8 +301,20 @@
 
         logoutBtn.addEventListener('click', () => signOut(auth));
         
+        // --- UPDATED: createModal function for better scrolling ---
         function createModal(title, content, maxWidth = 'max-w-4xl') {
-            modalContainer.innerHTML = `<div id="modal-backdrop" class="fixed inset-0 z-50 modal-backdrop flex justify-center items-start p-4 sm:p-6 md:p-10"><div class="bg-white rounded-lg shadow-xl w-full ${maxWidth} relative max-h-[90vh] overflow-y-auto"><div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center"><h2 class="text-2xl font-bold">${title}</h2><button id="close-modal-btn" class="text-2xl font-bold p-2 leading-none rounded-full hover:bg-gray-200">&times;</button></div>${content}</div></div>`;
+            modalContainer.innerHTML = `
+                <div id="modal-backdrop" class="fixed inset-0 z-50 modal-backdrop flex justify-center items-start p-4 sm:p-6 md:p-10">
+                    <div class="bg-white rounded-lg shadow-xl w-full ${maxWidth} relative flex flex-col max-h-[90vh]">
+                        <div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center flex-shrink-0">
+                            <h2 class="text-2xl font-bold">${title}</h2>
+                            <button id="close-modal-btn" class="text-2xl font-bold p-2 leading-none rounded-full hover:bg-gray-200">&times;</button>
+                        </div>
+                        <div class="overflow-y-auto">
+                            ${content}
+                        </div>
+                    </div>
+                </div>`;
             document.getElementById('modal-backdrop').addEventListener('click', (e) => { if (e.target.id === 'modal-backdrop' || e.target.id === 'close-modal-btn') { modalContainer.innerHTML = ''; } });
         }
         
