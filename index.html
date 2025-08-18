@@ -218,7 +218,7 @@
         }
 
         // --- JOB DETAIL MODAL ---
-        function showJobDetailModal(jobId) {
+        async function showJobDetailModal(jobId) {
             const job = currentJobs.find(j => j.id === jobId);
             if (!job) return;
 
@@ -241,7 +241,7 @@
                     <div id="cover-letter-generation-ui" class="hidden my-6 p-4 border rounded-lg bg-gray-50"></div>
 
                     <h3 class="text-xl font-semibold border-b pb-2 mt-8 mb-4">Job Description</h3>
-                    <p class="text-gray-700 leading-relaxed whitespace-pre-wrap">${job.description.replace(/\.\.\.$/, '')}</p>
+                    <div id="job-description-content" class="text-center"><div class="loader inline-block"></div></div>
                 </div>
             `;
             
@@ -255,6 +255,20 @@
                 document.getElementById('modal-cl-btn')?.addEventListener('click', () => {
                     generateCoverLetter(job);
                 });
+            }
+
+            try {
+                const response = await fetch('https://jobmaster-backend-y2bn.onrender.com/api/job/expand', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ description: job.description })
+                });
+                if (!response.ok) throw new Error('AI expansion failed');
+                const data = await response.json();
+                document.getElementById('job-description-content').innerHTML = `<p class="text-gray-700 leading-relaxed whitespace-pre-wrap text-left">${data.full_description}</p>`;
+            } catch (error) {
+                console.error("Failed to expand description:", error);
+                document.getElementById('job-description-content').innerHTML = `<p class="text-gray-700 leading-relaxed whitespace-pre-wrap text-left">${job.description.replace(/\.\.\.$/, '')}</p>`;
             }
         }
         
