@@ -24,26 +24,6 @@
         .prose p { margin-bottom: 1em; }
         .prose ul { list-style-position: inside; }
         .prose li { margin-bottom: 0.5em; }
-        /* Add styles for job description scrolling */
-        .job-description-container {
-            max-height: 400px;
-            overflow-y: auto;
-            padding-right: 8px;
-        }
-        .job-description-container::-webkit-scrollbar {
-            width: 8px;
-        }
-        .job-description-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
-        }
-        .job-description-container::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
-        }
-        .job-description-container::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -86,4 +66,311 @@
 
         <section id="listings-section" class="py-16"><div class="container mx-auto px-6"><div id="loading-indicator" class="hidden text-center"><div class="loader inline-block"></div><p class="mt-4 text-lg text-gray-600">Our AI is searching...</p></div><div id="results-summary" class="hidden text-center mb-8"><h2 class="text-2xl font-semibold"></h2></div><div id="job-listings" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div><div id="no-results" class="hidden text-center py-16"><img src="https://placehold.co/300x200/E2E8F0/4A5568?text=No+Results" alt="No results found" class="mx-auto mb-4 rounded-lg"><h3 class="text-2xl font-semibold text-gray-700">No Jobs Found</h3><p class="text-gray-500 mt-2">Try adjusting your search criteria.</p></div></div></section>
         
-        <section id="saved-jobs-section" class="hidden py-16 bg-gray-100"><div class="container mx-auto px-6"><div class="flex justify-between items-center mb-8"><h2 class="text-3xl font-bold">My Saved Jobs</h2><button id="back-to-search-btn" class="text-blue-600 hover:underline font-semibold">&larr; Back to Search</button></div><div id="saved-job-listings" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div><div id="no-saved-jobs" class="text-center py-16"><h3 class="text-2xl font-semibold text-gray-700">You haven't saved any jobs yet.</h3><p class="text-gray-500 mt-2">Click the bookmark icon on a job listing to save it here.</p></div><div class="mt-12 p-6 bg-white rounded-lg shadow-md"><h4 class="text-xl font-semibold mb-3">Email Notifications</h4><div class="flex items-center"><input type="checkbox" id="email-notifications-checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"><label for="email-notifications-checkbox" class="ml-2 block tex
+        <section id="saved-jobs-section" class="hidden py-16 bg-gray-100"><div class="container mx-auto px-6"><div class="flex justify-between items-center mb-8"><h2 class="text-3xl font-bold">My Saved Jobs</h2><button id="back-to-search-btn" class="text-blue-600 hover:underline font-semibold">&larr; Back to Search</button></div><div id="saved-job-listings" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div><div id="no-saved-jobs" class="text-center py-16"><h3 class="text-2xl font-semibold text-gray-700">You haven't saved any jobs yet.</h3><p class="text-gray-500 mt-2">Click the bookmark icon on a job listing to save it here.</p></div><div class="mt-12 p-6 bg-white rounded-lg shadow-md"><h4 class="text-xl font-semibold mb-3">Email Notifications</h4><div class="flex items-center"><input type="checkbox" id="email-notifications-checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"><label for="email-notifications-checkbox" class="ml-2 block text-sm text-gray-900">Receive email updates for new jobs that match your criteria.</label></div><p id="notification-status" class="text-sm text-green-600 mt-2 hidden">Settings saved!</p></div></div></section>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-12"><div class="container mx-auto px-6 text-center"><p>&copy; 2025 JobmasterAI. All rights reserved.</p></div></footer>
+
+    <div id="modal-container"></div>
+
+    <script type="module">
+        // --- YOUR FIREBASE CONFIGURATION ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyBD5eZH1oizQ0uKWOmENz63ix_7T_O8Kg4",
+          authDomain: "jobmaster-ai.firebaseapp.com",
+          projectId: "jobmaster-ai",
+          storageBucket: "jobmaster-ai.appspot.com",
+          messagingSenderId: "599499923987",
+          appId: "1:599499923987:web:f3a8603aa118727de795e6",
+          measurementId: "G-LNG39EN822"
+        };
+
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        let app;
+        try {
+            app = initializeApp(firebaseConfig);
+            console.log("Firebase Initialized Successfully!");
+        } catch (e) {
+            console.error("Error initializing Firebase:", e);
+        }
+        
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- GLOBAL STATE ---
+        let currentUser = null;
+        let savedJobIds = new Set();
+        let currentJobs = []; // Store the current search results
+        const { jsPDF } = window.jspdf;
+
+        // --- DOM ELEMENTS ---
+        const modalContainer = document.getElementById('modal-container');
+        const jobListingsContainer = document.getElementById('job-listings');
+        const howToUseBtn = document.getElementById('how-to-use-btn');
+        const loginBtn = document.getElementById('login-btn');
+        const signupBtn = document.getElementById('signup-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const authLinks = document.getElementById('auth-links');
+        const userSession = document.getElementById('user-session');
+        const userEmailSpan = document.getElementById('user-email');
+        const savedJobsBtn = document.getElementById('saved-jobs-btn');
+        const searchSection = document.getElementById('search-section');
+        const listingsSection = document.getElementById('listings-section');
+        const savedJobsSection = document.getElementById('saved-jobs-section');
+        const backToSearchBtn = document.getElementById('back-to-search-btn');
+        const savedJobListingsContainer = document.getElementById('saved-job-listings');
+        const noSavedJobsMessage = document.getElementById('no-saved-jobs');
+        const emailCheckbox = document.getElementById('email-notifications-checkbox');
+        const notificationStatus = document.getElementById('notification-status');
+        
+        // --- SERVER WAKE-UP FUNCTION ---
+        function warmUpServer() {
+            console.log("Warming up the server...");
+            const url = `https://jobmaster-backend-y2bn.onrender.com/api/search?q=wakeup`;
+            fetch(url).catch(err => {
+                console.log("Warm-up request sent. Server is likely waking up.");
+            });
+        }
+        
+        // --- JOB SEARCH & DISPLAY LOGIC ---
+        document.getElementById('search-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            let query = document.getElementById('search-input').value.trim();
+            if (!query) {
+                const queryParts = [ document.getElementById('experience-input').value.trim(), document.getElementById('role-input').value.trim(), document.getElementById('salary-input').value.trim() ? `with a salary of ${document.getElementById('salary-input').value.trim()}` : '', document.getElementById('location-input').value.trim() ? `in ${document.getElementById('location-input').value.trim()}` : '' ];
+                query = queryParts.filter(part => part !== '').join(' ');
+            }
+            if (query) searchJobs(query);
+        });
+
+        async function searchJobs(query) {
+            document.getElementById('loading-indicator').classList.remove('hidden');
+            jobListingsContainer.innerHTML = '';
+            document.getElementById('results-summary').classList.add('hidden');
+            document.getElementById('no-results').classList.add('hidden');
+
+            try {
+                const encodedQuery = encodeURIComponent(query);
+                const url = `https://jobmaster-backend-y2bn.onrender.com/api/search?q=${encodedQuery}`;
+                
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const results = await response.json();
+                currentJobs = results; // Store the results
+                displayJobs(results, query);
+
+            } catch (error) {
+                console.error("Failed to fetch jobs:", error);
+                jobListingsContainer.innerHTML = `<p class="text-center text-red-500">Could not connect to the job server. It might be waking up. Please try again in 30 seconds.</p>`;
+            } finally {
+                document.getElementById('loading-indicator').classList.add('hidden');
+            }
+        }
+
+        function displayJobs(jobs, query) {
+            if (jobs.length === 0) {
+                document.getElementById('no-results').classList.remove('hidden');
+                return;
+            }
+            const summaryH2 = document.querySelector('#results-summary h2');
+            summaryH2.textContent = `Found ${jobs.length} jobs matching your search for "${query}"`;
+            document.getElementById('results-summary').classList.remove('hidden');
+            
+            jobListingsContainer.innerHTML = '';
+            jobs.forEach(job => {
+                const jobCard = createJobCard(job);
+                jobListingsContainer.appendChild(jobCard);
+            });
+        }
+        
+        function createJobCard(job) {
+            const jobCard = document.createElement('div');
+            jobCard.className = 'job-card bg-white rounded-lg shadow-md p-6 border border-gray-200 cursor-pointer';
+            jobCard.dataset.jobId = job.id;
+
+            jobCard.innerHTML = `
+                <h3 class="text-xl font-bold text-gray-900 truncate">${job.title}</h3>
+                <p class="text-blue-600 font-semibold">${job.company}</p>
+                <p class="text-gray-500 text-sm mt-1">${job.location}</p>
+                <p class="text-gray-600 mt-4 text-sm line-clamp-2">${job.description}</p>
+            `;
+
+            jobCard.addEventListener('click', () => {
+                showJobDetailModal(job.id);
+            });
+            
+            return jobCard;
+        }
+
+        // --- JOB DETAIL MODAL ---
+        function showJobDetailModal(jobId) {
+            const job = currentJobs.find(j => j.id === jobId);
+            if (!job) return;
+
+            const isSaved = savedJobIds.has(job.id);
+            const saveButtonHtml = currentUser ? `<button id="modal-save-btn" class="flex items-center gap-2 justify-center w-full sm:w-auto bg-gray-200 text-gray-800 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"><svg class="w-6 h-6 ${isSaved ? 'text-blue-600 fill-current' : 'text-gray-400'}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg><span>${isSaved ? 'Saved' : 'Save'}</span></button>` : '';
+            const coverLetterButtonHtml = currentUser ? `<button id="modal-cl-btn" class="w-full sm:w-auto bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition">Generate Cover Letter</button>` : '';
+
+            const content = `
+                <div class="p-6 md:p-8">
+                    <h2 class="text-3xl font-bold text-gray-900">${job.title}</h2>
+                    <p class="text-blue-600 font-semibold text-lg mt-1">${job.company}</p>
+                    <p class="text-gray-500 text-md mt-1">${job.location}</p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 my-6">
+                        <a href="${job.link}" target="_blank" class="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition text-center">Apply Now</a>
+                        ${coverLetterButtonHtml}
+                        ${saveButtonHtml}
+                    </div>
+
+                    <div id="cover-letter-generation-ui" class="hidden my-6 p-4 border rounded-lg bg-gray-50"></div>
+
+                    <h3 class="text-xl font-semibold border-b pb-2 mt-8 mb-4">Job Description</h3>
+                    <p class="text-gray-700 leading-relaxed whitespace-pre-wrap">${job.description.replace(/\.\.\.$/, '')}</p>
+                </div>
+            `;
+            
+            createModal('', content);
+
+            if (currentUser) {
+                document.getElementById('modal-save-btn')?.addEventListener('click', () => {
+                    toggleSaveJob(job.id, job);
+                    showJobDetailModal(job.id);
+                });
+                document.getElementById('modal-cl-btn')?.addEventListener('click', () => {
+                    generateCoverLetter(job);
+                });
+            }
+        }
+        
+        // --- STREAMLINED COVER LETTER GENERATION ---
+        function generateCoverLetter(job) {
+            const uiContainer = document.getElementById('cover-letter-generation-ui');
+            uiContainer.classList.remove('hidden');
+            uiContainer.innerHTML = `<div class="flex items-center gap-4"><div class="loader"></div><p>Generating your personalized cover letter...</p></div>`;
+
+            setTimeout(() => {
+                const generatedText = `[Your Name]\n[Your Address] | [Your Email] | [Your Phone Number]\n\n[Date]\n\nHiring Manager\n${job.company}\n\nDear Hiring Manager,\n\nI am writing to express my keen interest in the ${job.title} position at ${job.company}, which I discovered on JobmasterAI. I am confident that I possess the skills and experience necessary to excel in this role.\n\nThe job description's emphasis on key responsibilities aligns perfectly with my professional experience. I am particularly adept at [mention a key skill from the job description] and have a proven track record of success in this area.\n\nI am excited about the opportunity to contribute to a forward-thinking company like ${job.company} and am eager to discuss how my qualifications can benefit your team. Thank you for your time and consideration.\n\nSincerely,\n[Your Name]`;
+                uiContainer.innerHTML = `
+                    <h4 class="font-semibold mb-2">Your cover letter is ready!</h4>
+                    <textarea class="w-full h-48 p-2 border rounded-md mb-4">${generatedText}</textarea>
+                    <div class="flex gap-4">
+                        <button id="download-pdf-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Download PDF</button>
+                        <button id="download-word-btn" class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800">Download Word Doc</button>
+                    </div>
+                `;
+                document.getElementById('download-pdf-btn').addEventListener('click', () => downloadPdf(job, document.querySelector('#cover-letter-generation-ui textarea').value));
+                document.getElementById('download-word-btn').addEventListener('click', () => downloadWord(job, document.querySelector('#cover-letter-generation-ui textarea').value));
+            }, 2000);
+        }
+
+        function downloadPdf(job, text) { const doc = new jsPDF(); const margin = 15; const pageHeight = doc.internal.pageSize.height; const lines = doc.splitTextToSize(text, 180); let cursor = margin; lines.forEach(line => { if (cursor > pageHeight - margin) { doc.addPage(); cursor = margin; } doc.text(line, margin, cursor); cursor += 7; }); doc.save(`${job.company} Cover Letter.pdf`); }
+        function downloadWord(job, text) { const { Document, Packer, Paragraph, TextRun } = window.docx; const paragraphs = text.split('\n').map(p => new Paragraph({ children: [new TextRun(p)], })); const doc = new Document({ sections: [{ properties: {}, children: paragraphs, }], }); Packer.toBlob(doc).then(blob => { const url = window.URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${job.company} Cover Letter.docx`; a.click(); window.URL.revokeObjectURL(url); }); }
+        
+        // --- All other functions (auth, firestore, modals, etc.) ---
+        onAuthStateChanged(auth, async (user) => {
+            currentUser = user;
+            if (user) {
+                authLinks.classList.add('hidden');
+                userSession.classList.remove('hidden'); userSession.classList.add('flex');
+                userEmailSpan.textContent = user.email;
+                await fetchUserSettings(user.uid);
+                await fetchSavedJobs(user.uid);
+            } else {
+                authLinks.classList.remove('hidden');
+                userSession.classList.add('hidden'); userSession.classList.remove('flex');
+                userEmailSpan.textContent = '';
+                savedJobIds.clear();
+            }
+        });
+
+        logoutBtn.addEventListener('click', () => signOut(auth));
+        
+        // --- CORRECTED createModal function for better scrolling ---
+        function createModal(title, content, maxWidth = 'max-w-5xl') {
+            modalContainer.innerHTML = `
+                <div id="modal-backdrop" class="fixed inset-0 z-50 modal-backdrop flex justify-center items-center p-4">
+                    <div class="bg-white rounded-lg shadow-xl w-full ${maxWidth} flex flex-col" style="height: 90vh; max-height: 800px;">
+                        
+                        <div class="p-4 border-b flex justify-between items-center flex-shrink-0">
+                            <h2 class="text-2xl font-bold">${title}</h2>
+                            <button id="close-modal-btn" class="text-2xl font-bold p-2 leading-none rounded-full hover:bg-gray-200">&times;</button>
+                        </div>
+
+                        <div class="overflow-y-auto flex-1">
+                            ${content}
+                        </div>
+
+                    </div>
+                </div>`;
+            document.getElementById('modal-backdrop').addEventListener('click', (e) => {
+                if (e.target.id === 'modal-backdrop') {
+                    modalContainer.innerHTML = '';
+                }
+            });
+            document.getElementById('close-modal-btn').addEventListener('click', () => {
+                modalContainer.innerHTML = '';
+            });
+        }
+        
+        howToUseBtn.addEventListener('click', () => {
+            const content = `<div class="p-6 prose max-w-none"><h3>Welcome to JobmasterAI!</h3><p>We're revolutionizing the job search by replacing confusing filters with powerful, intuitive AI. Here’s how to make the most of it.</p><h3>The Power of AI Search</h3><p>Instead of checking dozens of boxes, simply tell our AI what you're looking for in your own words. Be as specific as you like!</p><ul><li>Try searches like: <em>"entry-level marketing jobs in New York that are hybrid"</em></li><li>Or: <em>"senior backend developer with Python and AWS experience, salary over $150k"</em></li></ul><p>The more detail you provide, the better our AI can match you with the perfect role. This is the future of job hunting—no more guessing which keywords a recruiter used.</p><h3>Why Create an Account?</h3><p>Searching is free for everyone, but creating an account unlocks powerful features to supercharge your job hunt:</p><ul><li><strong>Save Jobs:</strong> Found a promising role? Bookmark it to review later. All your saved jobs are kept in one convenient place.</li><li><strong>AI Cover Letters:</strong> For any job you're interested in, our AI can generate a tailored cover letter in seconds, highlighting how your skills match the job description.</li><li><strong>Job Alerts:</strong> Opt-in to receive email notifications when new jobs that match your search criteria are posted. Never miss an opportunity!</li></ul></div>`;
+            createModal('How JobmasterAI Works', content);
+        });
+        
+        loginBtn.addEventListener('click', () => showAuthModal('login'));
+        signupBtn.addEventListener('click', () => showAuthModal('signup'));
+        function showAuthModal(type) { const isLogin = type === 'login'; const title = isLogin ? 'Log In' : 'Sign Up'; const buttonText = isLogin ? 'Log In' : 'Create Account'; const switchText = isLogin ? "Don't have an account? Sign Up" : "Already have an account? Log In"; const content = `<div class="p-8"><form id="auth-form"><div class="mb-4"><label for="email" class="block text-sm font-medium text-gray-700">Email Address</label><input type="email" id="email-input" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></div><div class="mb-6"><label for="password" class="block text-sm font-medium text-gray-700">Password</label><input type="password" id="password-input" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></div><p id="auth-error" class="text-red-500 text-sm mb-4 hidden"></p><button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition">${buttonText}</button></form><button id="switch-auth" class="w-full text-center text-sm text-blue-600 hover:underline mt-4">${switchText}</button></div>`; createModal(title, content, 'max-w-sm'); document.getElementById('switch-auth').addEventListener('click', () => showAuthModal(isLogin ? 'signup' : 'login')); document.getElementById('auth-form').addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('email-input').value; const password = document.getElementById('password-input').value; const errorP = document.getElementById('auth-error'); errorP.classList.add('hidden'); try { if (isLogin) { await signInWithEmailAndPassword(auth, email, password); } else { await createUserWithEmailAndPassword(auth, email, password); } modalContainer.innerHTML = ''; } catch (error) { errorP.textContent = error.message; errorP.classList.remove('hidden'); } }); }
+        
+        savedJobsBtn.addEventListener('click', () => { searchSection.classList.add('hidden'); listingsSection.classList.add('hidden'); savedJobsSection.classList.remove('hidden'); displaySavedJobs(); });
+        backToSearchBtn.addEventListener('click', () => { searchSection.classList.remove('hidden'); listingsSection.classList.remove('hidden'); savedJobsSection.classList.add('hidden'); });
+
+        async function fetchSavedJobs(userId) { const savedJobsCollection = collection(db, `users/${userId}/savedJobs`); const querySnapshot = await getDocs(savedJobsCollection); savedJobIds.clear(); querySnapshot.forEach((doc) => savedJobIds.add(doc.id)); }
+        async function toggleSaveJob(jobId, jobData) { if (!currentUser) return; const jobRef = doc(db, `users/${currentUser.uid}/savedJobs`, jobId); const saveButton = document.querySelector(`#modal-save-btn`); if (savedJobIds.has(jobId)) { await deleteDoc(jobRef); savedJobIds.delete(jobId); } else { await setDoc(jobRef, jobData); savedJobIds.add(jobId); } }
+        
+        // This function needs access to the job data. For simplicity, we'll filter from 'currentJobs' if available, otherwise, we'd need to fetch from Firestore.
+        async function displaySavedJobs() {
+            savedJobListingsContainer.innerHTML = '';
+            if (savedJobIds.size === 0) {
+                noSavedJobsMessage.classList.remove('hidden');
+                return;
+            }
+            noSavedJobsMessage.classList.add('hidden');
+            
+            // Fetch job details for saved jobs from Firestore
+            const jobs = [];
+            for (const jobId of savedJobIds) {
+                const jobDocRef = doc(db, `users/${currentUser.uid}/savedJobs`, jobId);
+                const jobDoc = await getDoc(jobDocRef);
+                if (jobDoc.exists()) {
+                    jobs.push(jobDoc.data());
+                }
+            }
+            // Add fetched jobs to currentJobs to make them clickable, avoiding duplicates
+            jobs.forEach(savedJob => {
+                if (!currentJobs.some(j => j.id === savedJob.id)) {
+                    currentJobs.push(savedJob);
+                }
+            });
+            
+            jobs.forEach(job => {
+                const jobCard = createJobCard(job);
+                savedJobListingsContainer.appendChild(jobCard);
+            });
+        }
+        
+        async function fetchUserSettings(userId) { const userDocRef = doc(db, "users", userId); const docSnap = await getDoc(userDocRef); emailCheckbox.checked = !!(docSnap.exists() && docSnap.data().emailNotifications); }
+        emailCheckbox.addEventListener('change', async (e) => { if (!currentUser) return; const userDocRef = doc(db, "users", currentUser.uid); try { await setDoc(userDocRef, { emailNotifications: e.target.checked }, { merge: true }); notificationStatus.classList.remove('hidden'); setTimeout(() => notificationStatus.classList.add('hidden'), 2000); } catch (error) { console.error("Error updating settings: ", error); } });
+
+        // --- INITIALIZE APP ---
+        warmUpServer();
+
+    </script>
+</body>
+</html>
