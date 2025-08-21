@@ -25,6 +25,15 @@
         .prose p { margin-bottom: 1em; }
         .prose ul { list-style-position: inside; }
         .prose li { margin-bottom: 0.5em; }
+        
+        /* Legal Document Styles */
+        [data-custom-class='body'], [data-custom-class='body'] * { background: transparent !important; }
+        [data-custom-class='title'], [data-custom-class='title'] * { font-family: Arial !important; font-size: 26px !important; color: #000000 !important; }
+        [data-custom-class='subtitle'], [data-custom-class='subtitle'] * { font-family: Arial !important; color: #595959 !important; font-size: 14px !important; }
+        [data-custom-class='heading_1'], [data-custom-class='heading_1'] * { font-family: Arial !important; font-size: 19px !important; color: #000000 !important; }
+        [data-custom-class='heading_2'], [data-custom-class='heading_2'] * { font-family: Arial !important; font-size: 17px !important; color: #000000 !important; }
+        [data-custom-class='body_text'], [data-custom-class='body_text'] * { color: #595959 !important; font-size: 14px !important; font-family: Arial !important; }
+        [data-custom-class='link'], [data-custom-class='link'] * { color: #3030F1 !important; font-size: 14px !important; font-family: Arial !important; word-break: break-word !important; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -76,7 +85,26 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-12"><div class="container mx-auto px-6 text-center"><p>&copy; 2025 JobmasterAI. All rights reserved.</p></div></footer>
+    <footer class="bg-gray-800 text-white py-12">
+        <div class="container mx-auto px-6 text-center">
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-4">
+                <a href="https://app.termly.io/policy-viewer/policy.html?policyUUID=dee7753b-0c6b-4fe8-9df3-3a7363c8f0c2" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="text-gray-300 hover:text-white transition-colors underline">
+                   Privacy Policy
+                </a>
+                <span class="hidden sm:inline text-gray-500">|</span>
+                <a href="https://app.termly.io/policy-viewer/policy.html?policyUUID=40ffdc74-74ec-4e75-aa0d-69ded4f6bae2" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="text-gray-300 hover:text-white transition-colors underline">
+                   Terms of Service
+                </a>
+            </div>
+            <p>&copy; 2025 JobmasterAI. All rights reserved.</p>
+        </div>
+    </footer>
 
     <!-- Modals Container -->
     <div id="modal-container"></div>
@@ -137,6 +165,8 @@
         const noSavedJobsMessage = document.getElementById('no-saved-jobs');
         const emailCheckbox = document.getElementById('email-notifications-checkbox');
         const notificationStatus = document.getElementById('notification-status');
+        const privacyPolicyBtn = document.getElementById('privacy-policy-btn');
+        const tosBtn = document.getElementById('tos-btn');
         
         // --- HELPER FUNCTION ---
         function createSnippet(html, length = 150) {
@@ -250,7 +280,7 @@
             return jobCard;
         }
 
-        function showJobDetailModal(jobId) {
+        async function showJobDetailModal(jobId) {
             const job = currentJobs.find(j => j.id === jobId);
             if (!job) return;
             const isSaved = savedJobIds.has(job.id);
@@ -269,12 +299,11 @@
                     </div>
                     <div id="cover-letter-generation-ui" class="hidden my-6 p-4 border rounded-lg bg-gray-50"></div>
                     <h3 class="text-xl font-semibold border-b pb-2 mt-8 mb-4">Job Description</h3>
-                    <div id="job-description-content" class="text-gray-700 leading-relaxed prose max-w-none"></div>
+                    <div id="job-description-content" class="text-center"><div class="loader inline-block"></div></div>
                 </div>
             `;
             
             createModal('', content);
-            document.getElementById('job-description-content').innerHTML = job.description;
 
             if (currentUser) {
                 document.getElementById('modal-save-btn')?.addEventListener('click', () => {
@@ -285,6 +314,20 @@
                     generateCoverLetter(job);
                 });
             }
+
+            try {
+                const response = await fetch('https://jobmaster-backend-y2bn.onrender.com/api/job/expand', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ description: job.description })
+                });
+                if (!response.ok) throw new Error('AI expansion failed');
+                const data = await response.json();
+                document.getElementById('job-description-content').innerHTML = `<div class="text-gray-700 leading-relaxed prose max-w-none">${data.full_description}</div>`;
+            } catch (error) {
+                console.error("Failed to expand description:", error);
+                document.getElementById('job-description-content').innerHTML = `<div class="text-gray-700 leading-relaxed prose max-w-none">${job.description.replace(/\.\.\.$/, '')}</div>`;
+            }
         }
         
         function createModal(title, content, maxWidth = 'max-w-5xl') {
@@ -293,13 +336,26 @@
             document.getElementById('close-modal-btn').addEventListener('click', () => { modalContainer.innerHTML = ''; });
         }
         
-        function warmUpServer() {
-            console.log("Warming up the server...");
-            const url = `https://jobmaster-backend-y2bn.onrender.com/api/search?q=wakeup`;
-            fetch(url).catch(err => {
-                console.log("Warm-up request sent. Server is likely waking up.");
-            });
+        function showPrivacyPolicyModal() {
+            const content = `
+                <div data-custom-class="body" class="p-6">
+                    ${"```html\n" + `<div><strong><span style="font-size: 26px;"><span data-custom-class="title"><h1>PRIVACY POLICY</h1></span></span></strong></div><div><span style="color: rgb(127, 127, 127);"><strong><span style="font-size: 15px;"><span data-custom-class="subtitle">Last updated <bdt class="question">August 20, 2025</bdt></span></span></strong></span></div><div style="line-height: 1.5;"><span style="color: rgb(127, 127, 127);"><span style="color: rgb(89, 89, 89); font-size: 15px;"><span data-custom-class="body_text">This Privacy Notice for <bdt class="question noTranslate">JobmasterAI</bdt> (<bdt class="block-component"></bdt>"<strong>we</strong>," "<strong>us</strong>," or "<strong>our</strong>"<bdt class="statement-end-if-in-editor"></bdt></span><span data-custom-class="body_text">), describes how and why we might access, collect, store, use, and/or share (<bdt class="block-component"></bdt>"<strong>process</strong>"<bdt class="statement-end-if-in-editor"></bdt>) your personal information when you use our services (<bdt class="block-component"></bdt>"<strong>Services</strong>"<bdt class="statement-end-if-in-editor"></bdt>), including when you:</span></span></span></div><ul><li data-custom-class="body_text" style="line-height: 1.5;"><span style="font-size: 15px; color: rgb(89, 89, 89);">Visit our website<bdt class="block-component"></bdt> at <a href="https://jobmasterai.io" target="_blank" data-custom-class="link"><bdt class="question noTranslate">https://jobmasterai.io</bdt></a><span style="font-size: 15px;"><span style="color: rgb(89, 89, 89);"><span data-custom-class="body_text"><span style="font-size: 15px;"><span style="color: rgb(89, 89, 89);"><bdt class="statement-end-if-in-editor"> or any website of ours that links to this Privacy Notice</bdt></span></span></span></span></span></span></li></ul><ul><li data-custom-class="body_text" style="line-height: 1.5;"><span style="font-size: 15px; color: rgb(89, 89, 89);">Engage with us in other related ways, including any sales, marketing, or events<span style="font-size: 15px;"><span style="color: rgb(89, 89, 89);"><span data-custom-class="body_text"><span style="font-size: 15px;"><span style="color: rgb(89, 89, 89);"><bdt class="statement-end-if-in-editor"></bdt></span></span></span></span></span></span></li></ul><div style="line-height: 1.5;"><span style="font-size: 15px;"><span style="color: rgb(127, 127, 127);"><span data-custom-class="body_text"><strong>Questions or concerns? </strong>Reading this Privacy Notice will help you understand your privacy rights and choices. If you do not agree with our policies and practices, please do not use our Services.<bdt class="block-component"></bdt> If you still have any questions or concerns, please contact us at <bdt class="question noTranslate">contact@jobmasterai.io</bdt>.</span></span></span></div>` + "```"}
+                </div>
+            `;
+            createModal('Privacy Policy', content);
         }
+
+        function showTosModal() {
+            const content = `
+                <div data-custom-class="body" class="p-6">
+                    ${"```html\n" + `<div align="center" style="text-align: left;"><div class="MsoNormal" data-custom-class="title" style="line-height: 1.5;"><strong><h1>TERMS OF SERVICE</h1></strong></div><div class="MsoNormal" data-custom-class="subtitle" style="line-height: 1.5;"><strong>Last updated</strong> <strong>August 20, 2025</strong></div></div><div align="center" style="text-align: left; line-height: 1.5;" class="MsoNormal" data-custom-class="body_text">We are JobmasterAI ("<strong>Company</strong>," "<strong>we</strong>," "<strong>us</strong>," "<strong>our</strong>"), a company registered in the District of Columbia, United States at 637 Orleans Pl NE, Washington, DC 20002, USA. We operate the website https://jobmasterai.io (the "<strong>Site</strong>"), as well as any other related products and services that refer or link to these legal terms (the "<strong>Legal Terms</strong>") (collectively, the "<strong>Services</strong>").</div><div align="center" style="text-align: left; line-height: 1.5;" class="MsoNormal" data-custom-class="body_text">These Legal Terms constitute a legally binding agreement made between you, whether personally or on behalf of an entity ("<strong>you</strong>"), and JobmasterAI, concerning your access to and use of the Services. You agree that by accessing the Services, you have read, understood, and agreed to be bound by all of these Legal Terms. IF YOU DO NOT AGREE WITH ALL OF THESE LEGAL TERMS, THEN YOU ARE EXPRESSLY PROHIBITED FROM USING THE SERVICES AND YOU MUST DISCONTINUE USE IMMEDIATELY.</div>` + "```"}
+                </div>
+            `;
+            createModal('Terms of Service', content);
+        }
+
+        privacyPolicyBtn.addEventListener('click', showPrivacyPolicyModal);
+        tosBtn.addEventListener('click', showTosModal);
         
         onAuthStateChanged(auth, async (user) => {
             currentUser = user;
