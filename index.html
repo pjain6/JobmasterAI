@@ -94,6 +94,13 @@
                    Terms of Service
                 </a>
                 <span class="hidden sm:inline text-gray-500">|</span>
+                <a href="https://app.termly.io/policy-viewer/policy.html?policyUUID=06c84d0b-f7b6-4cae-88d9-901872a2aa89" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="text-gray-300 hover:text-white transition-colors underline">
+                   Cookie Policy
+                </a>
+                <span class="hidden sm:inline text-gray-500">|</span>
                 <a href="#" class="termly-display-preferences text-gray-300 hover:text-white transition-colors underline">Consent Preferences</a>
             </div>
             <p>&copy; 2025 JobmasterAI. All rights reserved.</p>
@@ -201,7 +208,7 @@
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 
                 currentJobs = await response.json();
-                currentPage = 1; // Reset to first page on new search
+                currentPage = 1;
                 displayPage(currentPage, query);
 
             } catch (error) {
@@ -237,7 +244,7 @@
             });
             
             renderPaginationControls();
-            window.scrollTo(0, 0); // Scroll to top on page change
+            window.scrollTo(0, 0);
         }
 
         function renderPaginationControls() {
@@ -271,7 +278,12 @@
             const jobCard = document.createElement('div');
             jobCard.className = 'job-card bg-white rounded-lg shadow-md p-6 border border-gray-200 cursor-pointer';
             jobCard.dataset.jobId = job.id;
-            jobCard.innerHTML = `<h3 class="text-xl font-bold text-gray-900 truncate">${job.title}</h3><p class="text-blue-600 font-semibold">${job.company}</p><p class="text-gray-500 text-sm mt-1">${job.location}</p><p class="text-gray-600 mt-4 text-sm line-clamp-2">${createSnippet(job.description)}</p>`;
+            jobCard.innerHTML = `
+                <h3 class="text-xl font-bold text-gray-900 truncate">${job.title}</h3>
+                <p class="text-blue-600 font-semibold">${job.company}</p>
+                <p class="text-gray-500 text-sm mt-1">${job.location}</p>
+                <p class="text-gray-600 mt-4 text-sm line-clamp-2">${createSnippet(job.description)}</p>
+            `;
             jobCard.addEventListener('click', () => { showJobDetailModal(job.id); });
             return jobCard;
         }
